@@ -1,0 +1,132 @@
+"""
+Manchester Triage System (MTS) — Versão Interativa
+AVISO: Apenas educacional. Não substitui julgamento clínico.
+"""
+
+PRIORIDADES = {
+    1: ("Imediato",     "Vermelho", 0),
+    2: ("Muito Urgente","Laranja",  10),
+    3: ("Urgente",      "Amarelo",  60),
+    4: ("Pouco Urgente","Verde",    120),
+    5: ("Não Urgente",  "Azul",     240),
+}
+
+def avaliar(queixa, dor=None, spo2=None, fc=None, pas=None, gcs=None, temp=None):
+    nivel = 5
+    motivos = []
+    q = queixa.lower()
+
+    # --- Sinais vitais (Validação de Proposições Atômicas) ---
+    if spo2 is not None:
+        if spo2 < 85:   nivel = min(nivel, 1); motivos.append(f"SpO₂ crítico ({spo2}%)")
+        elif spo2 < 90: nivel = min(nivel, 2); motivos.append(f"SpO₂ baixo ({spo2}%)")
+
+    if gcs is not None:
+        if gcs <= 8:    nivel = min(nivel, 1); motivos.append(f"GCS ≤8 ({gcs})")
+        elif gcs <= 13: nivel = min(nivel, 2); motivos.append(f"GCS 9-13 ({gcs})")
+
+    if pas is not None:
+        if pas < 70:    nivel = min(nivel, 1); motivos.append(f"Hipotensão grave ({pas} mmHg)")
+        elif pas < 90:  nivel = min(nivel, 2); motivos.append(f"Hipotensão ({pas} mmHg)")
+        elif pas > 180: nivel = min(nivel, 3); motivos.append(f"Hipertensão ({pas} mmHg)")
+
+    if fc is not None:
+        if fc > 130:    nivel = min(nivel, 2); motivos.append(f"Taquicardia grave ({fc} bpm)")
+        elif fc > 100:  nivel = min(nivel, 3); motivos.append(f"Taquicardia ({fc} bpm)")
+
+    if temp is not None:
+        if temp >= 38.5: nivel = min(nivel, 2); motivos.append(f"Febre alta ({temp}°C)")
+        elif temp >= 38: nivel = min(nivel, 3); motivos.append(f"Febre ({temp}°C)")
+
+    if dor is not None:
+        if dor >= 7:    nivel = min(nivel, 2); motivos.append(f"Dor intensa ({dor}/10)")
+        elif dor >= 4:  nivel = min(nivel, 3); motivos.append(f"Dor moderada ({dor}/10)")
+        elif dor >= 1:  nivel = min(nivel, 4); motivos.append(f"Dor leve ({dor}/10)")
+
+    # --- Palavras-chave na queixa ---
+    imediato = ["parada cardíaca", "sem pulso", "inconsciente", "não respira",
+                "convulsão ativa", "obstrução via aérea", "sangramento grave", "edema de glote"]
+    muito_urgente = ["avc", "acidente vascular", "anáfilaxia", "anafilaxia",
+                     "dificuldade respiratória grave", "trauma grave", "dor torácica intensa"]
+    urgente = ["vômito com sangue", "desidratação", "febre", "dor abdominal",
+               "gestante", "fratura", "dispneia"]
+    pouco_urgente = ["torção", "entorse", "corte pequeno", "hematoma", "náusea leve"]
+    nao_urgente = ["crônico", "receita", "atestado", "sem mudança", "erupção cutânea"]
+
+    for kw in imediato:
+        if kw in q: nivel = min(nivel, 1); motivos.append(f"Queixa: {kw}")
+    for kw in muito_urgente:
+        if kw in q: nivel = min(nivel, 2); motivos.append(f"Queixa: {kw}")
+    for kw in urgente:
+        if kw in q: nivel = min(nivel, 3); motivos.append(f"Queixa: {kw}")
+    for kw in pouco_urgente:
+        if kw in q: nivel = min(nivel, 4); motivos.append(f"Queixa: {kw}")
+    for kw in nao_urgente:
+        if kw in q: nivel = min(nivel, 5); motivos.append(f"Queixa: {kw}")
+
+    label, cor, espera = PRIORIDADES[nivel]
+
+    print("\n" + "="*50)
+    print(f"  RESULTADO DA TRIAGEM MANCHESTER")
+    print("="*50)
+    print(f"  Prioridade : {nivel} — {label} [{cor}]")
+    print(f"  Espera max : {espera} minutes")
+    print(f"  Motivos     :")
+    if motivos:
+        for m in motivos:
+            print(f"    • {m}")
+    else:
+        print("    • Nenhum critério de risco específico detectado (Fluxo padrão)")
+    print("="*50)
+    print("  ⚠️ Apenas suporte à decisão clínica.")
+    print("="*50)
+
+    return nivel, label
+
+
+def obter_input_numerico(mensagem, tipo=float):
+    """Função auxiliar para tratar entradas vazias ou inválidas de forma segura"""
+    entrada = input(mensagem).strip()
+    if not entrada:  # Se o usuário apenas apertar Enter, retorna None (ignorado na triagem)
+        return None
+    try:
+        return tipo(entrada)
+    except ValueError:
+        print("⚠️ Valor inválido inserido. Este dado será ignorado nesta triagem.")
+        return None
+
+
+# --- Bloco de Interação com o Paciente ---
+if __name__ == "__main__":
+    print("="*50)
+    print("      SISTEMA AUTOMÁTICO DE TRIAGEM HOSPITALAR")
+    print("="*50)
+    print("Por favor, responda às perguntas abaixo para iniciar a triagem.")
+    print("(Pressione ENTER sem digitar nada para pular os sinais vitais caso não os tenha)")
+    print("-"*50)
+
+    # 1. Coleta da Queixa Principal (Obrigatória)
+    queixa_paciente = ""
+    while not queixa_paciente:
+        queixa_paciente = input("Digite a queixa principal (o que está sentindo?): ").strip()
+        if not queixa_paciente:
+            print("⚠️ A queixa principal é obrigatória para iniciar a análise.")
+
+    # 2. Coleta dos demais parâmetros (Opcionais)
+    dor_paciente   = obter_input_numerico("Escala de dor (0 a 10): ", tipo=int)
+    spo2_paciente  = obter_input_numerico("Oxigenação sanguínea - SpO2 % (ex: 95): ", tipo=float)
+    fc_paciente    = obter_input_numerico("Frequência Cardíaca - bpm (ex: 80): ", tipo=int)
+    pas_paciente   = obter_input_numerico("Pressão Arterial Sistólica - Máxima (ex: 120): ", tipo=int)
+    gcs_paciente   = obter_input_numerico("Escala de Coma de Glasgow (3 a 15): ", tipo=int)
+    temp_paciente  = obter_input_numerico("Temperatura Corporal °C (ex: 36.5): ", tipo=float)
+
+    # Executa a função lógica com os dados fornecidos pelo usuário
+    avaliar(
+        queixa=queixa_paciente,
+        dor=dor_paciente,
+        spo2=spo2_paciente,
+        fc=fc_paciente,
+        pas=pas_paciente,
+        gcs=gcs_paciente,
+        temp=temp_paciente
+    )
