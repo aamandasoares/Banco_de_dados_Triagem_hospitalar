@@ -1,0 +1,20 @@
+import hashlib
+import pandas as pd
+import numpy as np
+
+def anonimizar_paciente(df):
+    # Camada 1: Hashing SHA-256 completo do CPF
+    df['id_hash'] = df['cpf'].apply(
+        lambda x: hashlib.sha256(x.encode()).hexdigest())
+
+    # Camada 2: Generalização da idade
+    df['faixa_etaria'] = pd.cut(
+        df['idade'],
+        bins=[0, 12, 17, 39, 59, 120],
+        labels=['Criança', 'Adolescente', 'Adulto', 'Meia-Idade', 'Idoso'])
+
+    # Camada 3: Perturbação gaussiana na temperatura
+    df['temperatura'] += np.random.normal(0, 0.1, len(df))
+
+    # Remoção de colunas identificadoras
+    return df.drop(columns=['nome', 'cpf', 'endereco', 'telefone', 'idade'])
